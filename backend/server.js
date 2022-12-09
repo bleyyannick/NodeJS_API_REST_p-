@@ -8,5 +8,5 @@ connectDB();
 
 const app = express();
 
-app.use("/api/sauces", require("./sauceRoutes"));
+app.use("/api/sauces", require("./routes/sauceRoutes"));
 app.use("/api/auth/", require("./routes/userRoutes"));
