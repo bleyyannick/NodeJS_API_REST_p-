@@ -3,9 +3,8 @@ const mongoose = require("mongoose");
 const sauceSchema = mongoose.Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       required: true,
-      ref: "User",
     },
     name: {
       type: String,
@@ -36,11 +35,11 @@ const sauceSchema = mongoose.Schema(
       required: true,
     },
     usersLiked: {
-      type: userId,
+      type: [String],
       required: true,
     },
     usersDisliked: {
-      type: userId,
+      type: [String],
       required: true,
     },
   },
