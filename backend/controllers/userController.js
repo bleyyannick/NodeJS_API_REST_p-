@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const userModel = require("../model/userModel");
 
-const registerUser = async (req, res) => {
+const registerUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error });
@@ -11,8 +11,7 @@ const registerUser = async (req, res) => {
   // check if user exists
   const userExists = await userModel.findOne({ email });
   if (userExists) {
-    res.status(400);
-    throw new Error("L'utilisateur existe déjà");
+    return res.status(400).json({ message: "L'utilisateur existe déjà" });
   }
   // Hash password
   const salt = await bcrypt.genSalt(10);
@@ -31,31 +30,29 @@ const registerUser = async (req, res) => {
       .status(401)
       .json({ message: "l'email ou le mot de passe est incorrect" });
   }
-};
+});
 
-const loginUser = async (req, res) => {
+const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  try {
-    const user = await userModel.findOne({ email });
-    if (!user) {
-      return res
-        .status(401)
-        .json({ message: "Paire login/mot de passe incorrecte" });
-    }
-    const valid = bcrypt.compare(password, { password });
-    if (!valid) {
-      return res
-        .status(401)
-        .json({ message: "Paire login/mot de passe incorrecte" });
-    }
-    res.status(200).json({
-      userId: user._id,
-      token: jwt.sign({ userId: user._id }, "TOKEN", { expiresIn: "24h" }),
-    });
-  } catch (error) {
-    return res.status(500).json({ error });
+  const user = await userModel.findOne({ email });
+  if (!user) {
+    return res
+      .status(401)
+      .json({ message: "Paire login/mot de passe incorrecte" });
   }
-};
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) {
+    return res
+      .status(401)
+      .json({ message: "Paire login/mot de passe incorrecte" });
+  }
+  res.status(200).json({
+    userId: user._id,
+    token: jwt.sign({ userId: user._id }, "RANDOM_TOKEN_SECRET", {
+      expiresIn: "24h",
+    }),
+  });
+});
 
 module.exports = {
   registerUser,

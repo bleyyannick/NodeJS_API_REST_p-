@@ -9,9 +9,12 @@ connectDB();
 
 const app = express();
 
+app.use(express.json());
 app.use(helmet());
 
 app.use("/api/sauces", require("./routes/sauceRoutes"));
-app.use("/api/auth/", require("./routes/userRoutes"));
+app.use("/api/auth", require("./routes/userRoutes"));
+
+app.listen(port, console.log(`Server started on ${port}`));
 
 module.exports = app;

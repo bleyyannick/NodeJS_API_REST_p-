@@ -1,29 +1,23 @@
 const express = require("express");
+const {
+  getSauces,
+  postSauce,
+  getSauce,
+  updateSauce,
+  deleteSauce,
+  postSauceLike,
+} = require("../controllers/sauceController");
+const { auth } = require("../middleware/authMiddleware");
+const multer = require("../middleware/multer-config");
 
 const router = express.Router();
 
-router.get("/", (req, res) => {
-  res.status(200).json({ message: "Create a sauce" });
-});
+router.route("/").get(auth, getSauces).post(auth, multer, postSauce);
+router
+  .route("/:id")
+  .get(auth, getSauce)
+  .put(auth, multer, updateSauce)
+  .delete(auth, deleteSauce);
 
-router.get("/:id", (req, res) => {
-  res.status(200).json({ message: "Create a sauce" });
-});
-
-router.post("/", (req, res) => {
-  res.status(200).json({ message: "Create a sauce" });
-});
-
-router.post("/:id/like", (req, res) => {
-  res.status(200).json({ message: "Create a sauce" });
-});
-
-router.put("/:id", (req, res) => {
-  res.status(200).json({ message: "Create a sauce" });
-});
-
-router.delete("/id", (req, res) => {
-  res.status(200).json({ message: "Create a sauce" });
-});
-
+router.route.get("/:id/like").post(auth, postSauceLike);
 module.exports = router;
