@@ -8,7 +8,7 @@ const getSauces = asyncHandler(async (req, res) => {
 
 //GET /api/sauces/:id
 const getSauce = asyncHandler(async (req, res) => {
-  const sauce = await sauceModel.findById({ _id: req.params.id });
+  const sauce = await sauceModel.findById(req.params.id);
   if (!sauce) {
     return res.status(400).json({ message: "la sauce n'a pas été trouvée" });
   }
@@ -17,16 +17,22 @@ const getSauce = asyncHandler(async (req, res) => {
 
 //POST /api/sauces
 const postSauce = asyncHandler(async (req, res) => {
-  if (!req.body.sauce || req.body.image) {
+  if (!req.body.sauce || !req.body.image) {
     res
       .status(400)
       .json({ message: "Veuillez ajouter une sauce avec une image" });
   }
-  delete req.body._id;
+  const sauceObj = JSON.parse(req.body.sauce);
+  delete sauceObj._id;
+  delete sauceObj._userId;
   await sauceModel.create({
-    ...req.body,
+    ...sauceObj,
+    userId: req.auth.userId,
+    imageUrl: `${req.protocol}://${req.get("host")}/images/${
+      req.file.filename
+    }`,
   });
-  res.status(200).json({ message: "Votre sauce a bien été ajouté" });
+  res.status(201).json({ message: "Votre sauce a bien été ajouté" });
 });
 
 //POST /api/sauces/:id/like
@@ -34,17 +40,48 @@ const postSauceLike = asyncHandler(async (req, res) => {});
 
 //PUT /api/sauces/:id
 const updateSauce = asyncHandler(async (req, res) => {
-  const sauce = await sauceModel.findById(req.params.id);
-  if (!sauce) {
-    return res.status(400).json({ message: "La sauce n'a pas été trouvée " });
-  }
-  const editedSauce = await sauceModel.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-  );
+  const sauceObj = req.file
+    ? {
+        ...JSON.parse(req.body.sauce),
+        imageUrl: `${req.protocol}://${req.get("host")}/images/${
+          req.file.filename
+        }`,
+      }
+    : { ...req.body };
 
-  res.status(200).json(editedSauce);
+  delete sauceObj._userId;
+  sauceModel
+    .findById(req.params.id)
+    .then((sauce) => {
+      if (sauce.userId != req.auth.userId) {
+        res.status(401).json({
+          message:
+            "Vous n'êtes pas autorisé à modifier les informations des sauces",
+        });
+      } else {
+        sauceModel
+          .findByIdAndUpdate(req.params.id, req.body, { new: true })
+          .then(() =>
+            res.status(200).json({ message: "la sauce a été modifiée" })
+          )
+          .catch((error) => res.status(401).json({ error }));
+      }
+    })
+    .catch((error) => {
+      res.status(400).json({ error });
+    });
+
+  // const sauce = await sauceModel.findById(req.params.id);
+  // if (!sauce) {
+  //   return res.status(400).json({ message: "La sauce n'a pas été trouvée " });
+  // }
+  // const editedSauce = await sauceModel.findByIdAndUpdate(
+  //   req.params.id,
+  //   req.body,
+  //   { new: true }
+  // );
+
+  // res.status(200).json(editedSauce);
 });
 
 //DELETE /api/sauces/:id
