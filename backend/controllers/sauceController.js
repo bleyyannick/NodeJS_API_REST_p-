@@ -17,12 +17,11 @@ const getSauce = asyncHandler(async (req, res) => {
 
 //POST /api/sauces
 const postSauce = asyncHandler(async (req, res) => {
-  if (!req.body.sauce || !req.body.image) {
-    res
-      .status(400)
-      .json({ message: "Veuillez ajouter une sauce avec une image" });
+  const { sauce, image } = req.body;
+  if (!sauce || !req.file) {
+    res.status(400).json({ message: "faute" });
   }
-  const sauceObj = JSON.parse(req.body.sauce);
+  const sauceObj = JSON.parse(sauce);
   delete sauceObj._id;
   delete sauceObj._userId;
   await sauceModel.create({
@@ -31,6 +30,10 @@ const postSauce = asyncHandler(async (req, res) => {
     imageUrl: `${req.protocol}://${req.get("host")}/images/${
       req.file.filename
     }`,
+    likes: 0,
+    dislikes: 0,
+    usersLiked: [],
+    usersDisliked: [],
   });
   res.status(201).json({ message: "Votre sauce a bien été ajouté" });
 });
@@ -48,7 +51,7 @@ const updateSauce = asyncHandler(async (req, res) => {
         }`,
       }
     : { ...req.body };
-
+  delete sauceObj._id;
   delete sauceObj._userId;
   sauceModel
     .findById(req.params.id)
@@ -60,7 +63,7 @@ const updateSauce = asyncHandler(async (req, res) => {
         });
       } else {
         sauceModel
-          .findByIdAndUpdate(req.params.id, req.body, { new: true })
+          .findByIdAndUpdate(req.params.id, sauceObj, { new: true })
           .then(() =>
             res.status(200).json({ message: "la sauce a été modifiée" })
           )
