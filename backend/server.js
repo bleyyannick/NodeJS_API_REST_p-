@@ -1,6 +1,4 @@
 const express = require("express");
-const helmet = require("helmet");
-const colors = require("colors");
 const dotenv = require("dotenv").config();
 const port = process.env.PORT || 3000;
 const path = require("path");
