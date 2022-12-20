@@ -1,6 +1,11 @@
 const asyncHandler = require("express-async-handler");
 const sauceModel = require("../model/sauceModel");
 const fs = require("fs");
+const { config } = require("dotenv");
+
+const DISLIKE = -1;
+const LIKE = 1;
+const CANCEL_ANSWER = 0;
 // GET /api/sauces
 const getSauces = asyncHandler(async (req, res) => {
   const sauces = await sauceModel.find();
@@ -40,7 +45,54 @@ const postSauce = asyncHandler(async (req, res) => {
 });
 
 //POST /api/sauces/:id/like
-const postSauceLike = asyncHandler(async (req, res) => {});
+const postSauceLike = asyncHandler(async (req, res) => {
+  const { userId, like } = req.body;
+  const { id } = req.params;
+  const selectedSauce = await sauceModel.findById(id);
+  if (userId !== req.auth.userId) {
+    return res.status(401).json({
+      message: "Not authorized",
+    });
+  }
+
+  if (like === LIKE) {
+    const likedSauce = await sauceModel.updateOne(
+      { _id: id },
+      { ...req.body, $inc: { likes: like }, $push: { usersLiked: userId } }
+    );
+    console.log(likedSauce);
+  }
+  if (like === DISLIKE) {
+    const likedSauce = await sauceModel.updateOne(
+      { _id: id },
+      { ...req.body, $inc: { likes: like }, $push: { usersDisliked: userId } }
+    );
+    return res
+      .status(200)
+      .json({ message: "cet utilisateur n'aime pas la sauce" });
+  }
+  if (like === CANCEL_ANSWER) {
+    if (selectedSauce.usersDisliked.includes(userId)) {
+      const cancelDislikeSauce = await sauceModel.updateOne(
+        { _id: id },
+        {
+          ...req.body,
+          $inc: { dislikes: -1 },
+          $pull: { usersDisliked: userId },
+        }
+      );
+    } else if (selectedSauce.usersLiked.includes(userId)) {
+      const cancelLikeSauce = await sauceModel.updateOne(
+        { _id: id },
+        {
+          ...req.body,
+          $inc: { likes: -1 },
+          $pull: { usersLiked: userId },
+        }
+      );
+    }
+  }
+});
 
 //PUT /api/sauces/:id
 const updateSauce = asyncHandler(async (req, res) => {
