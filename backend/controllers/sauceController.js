@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const sauceModel = require("../model/sauceModel");
+const fs = require("fs");
 // GET /api/sauces
 const getSauces = asyncHandler(async (req, res) => {
   const sauces = await sauceModel.find();
@@ -17,7 +18,7 @@ const getSauce = asyncHandler(async (req, res) => {
 
 //POST /api/sauces
 const postSauce = asyncHandler(async (req, res) => {
-  const { sauce, image } = req.body;
+  const { sauce } = req.body;
   if (!sauce || !req.file) {
     res.status(400).json({ message: "faute" });
   }
@@ -73,28 +74,20 @@ const updateSauce = asyncHandler(async (req, res) => {
     .catch((error) => {
       res.status(400).json({ error });
     });
-
-  // const sauce = await sauceModel.findById(req.params.id);
-  // if (!sauce) {
-  //   return res.status(400).json({ message: "La sauce n'a pas été trouvée " });
-  // }
-  // const editedSauce = await sauceModel.findByIdAndUpdate(
-  //   req.params.id,
-  //   req.body,
-  //   { new: true }
-  // );
-
-  // res.status(200).json(editedSauce);
 });
 
 //DELETE /api/sauces/:id
 const deleteSauce = asyncHandler(async (req, res) => {
   const deletedSauce = await sauceModel.findById(req.params.id);
-  if (!deletedSauce) {
-    return res.status(400).json({ message: "La sauce n'a pas été trouvée " });
+  if (deletedSauce.userId !== req.auth.userId) {
+    return res.status(401).json({ message: "Not authorized" });
   }
-  await deletedSauce.remove();
-  res.status(200).json({ message: "La sauce a été supprimée" });
+
+  const filename = deletedSauce.imageUrl.split("/images/")[1];
+  fs.unlink(`/images/${filename}`, async () => {
+    await sauceModel.deleteOne({ _id: req.params.id });
+    res.status(200).json({ message: "La sauce a été supprimée" });
+  });
 });
 
 module.exports = {
