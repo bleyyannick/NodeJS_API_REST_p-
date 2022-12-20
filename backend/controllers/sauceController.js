@@ -84,7 +84,7 @@ const deleteSauce = asyncHandler(async (req, res) => {
   }
 
   const filename = deletedSauce.imageUrl.split("/images/")[1];
-  fs.unlink(`/images/${filename}`, async () => {
+  fs.unlink(`images/${filename}`, async () => {
     await sauceModel.deleteOne({ _id: req.params.id });
     res.status(200).json({ message: "La sauce a été supprimée" });
   });
