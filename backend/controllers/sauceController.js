@@ -1,37 +1,30 @@
-const asyncHandler = require("express-async-handler");
 const sauceModel = require("../model/sauceModel");
 const fs = require("fs");
-const { config } = require("dotenv");
 
 const DISLIKE = -1;
 const LIKE = 1;
-const CANCEL_ANSWER = 0;
 // GET /api/sauces
-const getSauces = asyncHandler(async (req, res) => {
+const getSauces = async (req, res) => {
   const sauces = await sauceModel.find();
   res.status(200).json(sauces);
-});
+};
 
 //GET /api/sauces/:id
-const getSauce = asyncHandler(async (req, res) => {
+const getSauce = async (req, res) => {
   const sauce = await sauceModel.findById(req.params.id);
   if (!sauce) {
     return res.status(400).json({ message: "la sauce n'a pas été trouvée" });
   }
   res.status(200).json(sauce);
-});
+};
 
 //POST /api/sauces
-const postSauce = asyncHandler(async (req, res) => {
-  const { sauce } = req.body;
-  if (!sauce || !req.file) {
-    res.status(400).json({ message: "faute" });
-  }
-  const sauceObj = JSON.parse(sauce);
-  delete sauceObj._id;
-  delete sauceObj._userId;
-  await sauceModel.create({
-    ...sauceObj,
+const postSauce = async (req, res) => {
+  const objectSauce = JSON.parse(req.body.sauce);
+  delete objectSauce._id;
+  delete objectSauce._userId;
+  const newSauce = new sauceModel({
+    ...objectSauce,
     userId: req.auth.userId,
     imageUrl: `${req.protocol}://${req.get("host")}/images/${
       req.file.filename
@@ -41,61 +34,67 @@ const postSauce = asyncHandler(async (req, res) => {
     usersLiked: [],
     usersDisliked: [],
   });
-  res.status(201).json({ message: "Votre sauce a bien été ajouté" });
-});
+  newSauce
+    .save()
+    .then(() => {
+      res.status(201).json({ message: "Votre sauce a bien été ajouté" });
+    })
+    .catch((error) => {
+      throw new Error(error);
+    });
+};
 
 //POST /api/sauces/:id/like
-const postSauceLike = asyncHandler(async (req, res) => {
+const postSauceLike = async (req, res) => {
   const { userId, like } = req.body;
-  const { id } = req.params;
-  const selectedSauce = await sauceModel.findById(id);
-  if (userId !== req.auth.userId) {
-    return res.status(401).json({
-      message: "Not authorized",
-    });
-  }
-
+  const selectedSauce = await sauceModel.findById(req.params.id);
+  delete req.body.userId;
   if (like === LIKE) {
-    const likedSauce = await sauceModel.updateOne(
-      { _id: id },
+    await sauceModel.updateOne(
+      { _id: req.params.id },
       { ...req.body, $inc: { likes: like }, $push: { usersLiked: userId } }
     );
-    console.log(likedSauce);
+    return res.status(200).json({ message: "cet utilisateur aime la sauce" });
   }
   if (like === DISLIKE) {
-    const likedSauce = await sauceModel.updateOne(
-      { _id: id },
-      { ...req.body, $inc: { likes: like }, $push: { usersDisliked: userId } }
+    await sauceModel.updateOne(
+      { _id: req.params.id },
+      {
+        ...req.body,
+        $inc: { dislikes: 1 },
+        $push: { usersDisliked: userId },
+      }
     );
     return res
       .status(200)
       .json({ message: "cet utilisateur n'aime pas la sauce" });
   }
-  if (like === CANCEL_ANSWER) {
-    if (selectedSauce.usersDisliked.includes(userId)) {
-      const cancelDislikeSauce = await sauceModel.updateOne(
-        { _id: id },
-        {
-          ...req.body,
-          $inc: { dislikes: -1 },
-          $pull: { usersDisliked: userId },
-        }
-      );
-    } else if (selectedSauce.usersLiked.includes(userId)) {
-      const cancelLikeSauce = await sauceModel.updateOne(
-        { _id: id },
-        {
-          ...req.body,
-          $inc: { likes: -1 },
-          $pull: { usersLiked: userId },
-        }
-      );
-    }
+
+  if (selectedSauce.usersDisliked.includes(userId)) {
+    await sauceModel.updateOne(
+      { _id: req.params.id },
+      {
+        ...req.body,
+        $inc: { dislikes: -1 },
+        $pull: { usersDisliked: userId },
+      }
+    );
+    return res.status(200).json({ message: "le dislike est annulé" });
+  } else if (selectedSauce.usersLiked.includes(userId)) {
+    await sauceModel.updateOne(
+      { _id: req.params.id },
+      {
+        ...req.body,
+        $inc: { likes: -1 },
+        $pull: { usersLiked: userId },
+      }
+    );
+    return res.status(200).json({ message: "le like est annulé" });
   }
-});
+};
 
 //PUT /api/sauces/:id
-const updateSauce = asyncHandler(async (req, res) => {
+const updateSauce = async (req, res) => {
   const sauceObj = req.file
     ? {
         ...JSON.parse(req.body.sauce),
@@ -104,13 +103,12 @@ const updateSauce = asyncHandler(async (req, res) => {
         }`,
       }
     : { ...req.body };
-  delete sauceObj._id;
   delete sauceObj._userId;
-  sauceModel
+  await sauceModel
     .findById(req.params.id)
     .then((sauce) => {
-      if (sauce.userId != req.auth.userId) {
-        res.status(401).json({
+      if (sauce.userId !== req.auth.userId) {
+        return res.status(401).json({
           message:
             "Vous n'êtes pas autorisé à modifier les informations des sauces",
         });
@@ -126,12 +124,12 @@ const updateSauce = asyncHandler(async (req, res) => {
     .catch((error) => {
       res.status(400).json({ error });
     });
-});
+};
 
 //DELETE /api/sauces/:id
-const deleteSauce = asyncHandler(async (req, res) => {
+const deleteSauce = async (req, res) => {
   const deletedSauce = await sauceModel.findById(req.params.id);
-  if (deletedSauce.userId !== req.auth.userId) {
+  if (deletedSauce.userId != req.auth.userId) {
     return res.status(401).json({ message: "Not authorized" });
   }
 
@@ -140,7 +138,7 @@ const deleteSauce = asyncHandler(async (req, res) => {
     await sauceModel.deleteOne({ _id: req.params.id });
     res.status(200).json({ message: "La sauce a été supprimée" });
   });
-});
+};
 
 module.exports = {
   postSauce,

@@ -12,12 +12,10 @@ const multer = require("../middleware/multer-config");
 
 const router = express.Router();
 
-router.route("/").get(auth, getSauces).post(auth, multer, postSauce);
-router
-  .route("/:id")
-  .get(auth, getSauce)
-  .put(auth, multer, updateSauce)
-  .delete(auth, deleteSauce);
-
-router.route("/:id/like").post(auth, postSauceLike);
+router.put("/:id", auth, multer, updateSauce);
+router.get("/:id", auth, getSauce);
+router.delete("/:id", auth, deleteSauce);
+router.get("/", auth, getSauces);
+router.post("/", auth, multer, postSauce);
+router.post("/:id/like", auth, postSauceLike);
 module.exports = router;

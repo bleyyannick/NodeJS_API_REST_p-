@@ -1,12 +1,11 @@
-const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const userModel = require("../model/userModel");
 
-const registerUser = asyncHandler(async (req, res) => {
+const registerUser = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ error });
+    return res.status(400).json({ message: "faute" });
   }
   // check if user exists
   const userExists = await userModel.findOne({ email });
@@ -16,7 +15,6 @@ const registerUser = asyncHandler(async (req, res) => {
   // Hash password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
-
   const user = await userModel.create({
     email,
     password: hashedPassword,
@@ -30,9 +28,9 @@ const registerUser = asyncHandler(async (req, res) => {
       .status(401)
       .json({ message: "l'email ou le mot de passe est incorrect" });
   }
-});
+};
 
-const loginUser = asyncHandler(async (req, res) => {
+const loginUser = async (req, res) => {
   const { email, password } = req.body;
   const user = await userModel.findOne({ email });
   if (!user) {
@@ -48,11 +46,11 @@ const loginUser = asyncHandler(async (req, res) => {
   }
   res.status(200).json({
     userId: user._id,
-    token: jwt.sign({ userId: user._id }, "RANDOM_TOKEN_SECRET", {
+    token: jwt.sign({ userId: user._id }, process.env.JWT, {
       expiresIn: "24h",
     }),
   });
-});
+};
 
 module.exports = {
   registerUser,

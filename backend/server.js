@@ -1,32 +1,50 @@
-const express = require("express");
-const dotenv = require("dotenv").config();
-const port = process.env.PORT || 3000;
-const path = require("path");
-const { errorHandler } = require("./middleware/errorMiddleware");
-const connectDB = require("./config/db");
+// Module import
+const http = require("http");
+// File import
+const app = require("./app");
 
-connectDB();
+const normalizePort = (val) => {
+  const port = parseInt(val, 10);
 
-const app = express();
+  if (isNaN(port)) {
+    return val;
+  }
+  if (port >= 0) {
+    return port;
+  }
+  return false;
+};
+const port = normalizePort(process.env.PORT || "3000");
+app.set("port", port);
 
-app.use(express.json());
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-  );
-  next();
+const errorHandler = (error) => {
+  if (error.syscall !== "listen") {
+    throw error;
+  }
+  const address = server.address();
+  const bind =
+    typeof address === "string" ? "pipe " + address : "port: " + port;
+  switch (error.code) {
+    case "EACCES":
+      console.error(bind + " requires elevated privileges.");
+      process.exit(1);
+      break;
+    case "EADDRINUSE":
+      console.error(bind + " is already in use.");
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+};
+
+const server = http.createServer(app);
+
+server.on("error", errorHandler);
+server.on("listening", () => {
+  const address = server.address();
+  const bind = typeof address === "string" ? "pipe " + address : "port " + port;
+  console.log("Listening on " + bind);
 });
 
-app.use("/images", express.static(path.join(__dirname, "images")));
-app.use("/api/auth", require("./routes/userRoutes"));
-app.use("/api/sauces", require("./routes/sauceRoutes"));
-app.use(errorHandler);
-app.listen(port, console.log(`Server started on ${port}`));
-
-module.exports = app;
+server.listen(port);
