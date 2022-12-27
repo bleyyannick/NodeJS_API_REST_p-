@@ -1,6 +1,6 @@
 const express = require("express");
+const helmet = require("helmet");
 const dotenv = require("dotenv").config();
-const port = process.env.PORT || 3000;
 const path = require("path");
 const connectDB = require("./config/db");
 
@@ -21,8 +21,8 @@ app.use((req, res, next) => {
   );
   next();
 });
-
 app.use("/images", express.static(path.join(__dirname, "images")));
+app.use(helmet());
 
 app.use("/api/auth", require("./routes/userRoutes"));
 app.use("/api/sauces", require("./routes/sauceRoutes"));
