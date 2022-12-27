@@ -9,14 +9,12 @@ const auth = async (req, res, next) => {
       userId: userId,
     };
     if (req.body.userId && req.body.userId !== userId) {
-      throw "Invalid user ID";
+      throw "wrong userId";
     } else {
       next();
     }
-  } catch {
-    res.status(401).json({
-      error: new Error("Invalid request!"),
-    });
+  } catch (error) {
+    throw new Error(error);
   }
 };
 

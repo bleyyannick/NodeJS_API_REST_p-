@@ -8,48 +8,60 @@ const registerUser = async (req, res) => {
     return res.status(400).json({ message: "faute" });
   }
   // check if user exists
-  const userExists = await userModel.findOne({ email });
-  if (userExists) {
-    return res.status(400).json({ message: "L'utilisateur existe déjà" });
-  }
-  // Hash password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-  const user = await userModel.create({
-    email,
-    password: hashedPassword,
-  });
-  if (user) {
-    res.status(201).json({
-      message: "Utilisateur créé!",
-    });
-  } else {
-    return res
-      .status(401)
-      .json({ message: "l'email ou le mot de passe est incorrect" });
+  try {
+    const userExists = await userModel.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "L'utilisateur existe déjà" });
+    }
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    try {
+      const user = await userModel.create({
+        email,
+        password: hashedPassword,
+      });
+      if (user) {
+        res.status(201).json({
+          message: "Utilisateur créé!",
+        });
+      } else {
+        return res
+          .status(401)
+          .json({ message: "l'email ou le mot de passe est incorrect" });
+      }
+    } catch (error) {
+      throw new Error(error);
+    }
+  } catch (error) {
+    throw new Error(error);
   }
 };
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
-  const user = await userModel.findOne({ email });
-  if (!user) {
-    return res
-      .status(401)
-      .json({ message: "Paire login/mot de passe incorrecte" });
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Paire login/mot de passe incorrecte" });
+    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res
+        .status(401)
+        .json({ message: "Paire login/mot de passe incorrecte" });
+    }
+    res.status(200).json({
+      userId: user._id,
+      token: jwt.sign({ userId: user._id }, process.env.JWT, {
+        expiresIn: "24h",
+      }),
+    });
+  } catch (error) {
+    throw new Error(error);
   }
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) {
-    return res
-      .status(401)
-      .json({ message: "Paire login/mot de passe incorrecte" });
-  }
-  res.status(200).json({
-    userId: user._id,
-    token: jwt.sign({ userId: user._id }, process.env.JWT, {
-      expiresIn: "24h",
-    }),
-  });
 };
 
 module.exports = {

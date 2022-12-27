@@ -5,17 +5,25 @@ const DISLIKE = -1;
 const LIKE = 1;
 // GET /api/sauces
 const getSauces = async (req, res) => {
-  const sauces = await sauceModel.find();
-  res.status(200).json(sauces);
+  try {
+    const sauces = await sauceModel.find();
+    res.status(200).json(sauces);
+  } catch (error) {
+    throw new Error(error);
+  }
 };
 
 //GET /api/sauces/:id
 const getSauce = async (req, res) => {
-  const sauce = await sauceModel.findById(req.params.id);
-  if (!sauce) {
-    return res.status(400).json({ message: "la sauce n'a pas été trouvée" });
+  try {
+    const sauce = await sauceModel.findById(req.params.id);
+    if (!sauce) {
+      return res.status(400).json({ message: "la sauce n'a pas été trouvée" });
+    }
+    res.status(200).json(sauce);
+  } catch (error) {
+    throw new Error(error);
   }
-  res.status(200).json(sauce);
 };
 
 //POST /api/sauces
@@ -47,49 +55,71 @@ const postSauce = async (req, res) => {
 //POST /api/sauces/:id/like
 const postSauceLike = async (req, res) => {
   const { userId, like } = req.body;
-  const selectedSauce = await sauceModel.findById(req.params.id);
-  delete req.body.userId;
-  if (like === LIKE) {
-    await sauceModel.updateOne(
-      { _id: req.params.id },
-      { ...req.body, $inc: { likes: like }, $push: { usersLiked: userId } }
-    );
-    return res.status(200).json({ message: "cet utilisateur aime la sauce" });
-  }
-  if (like === DISLIKE) {
-    await sauceModel.updateOne(
-      { _id: req.params.id },
-      {
-        ...req.body,
-        $inc: { dislikes: 1 },
-        $push: { usersDisliked: userId },
+  try {
+    const selectedSauce = await sauceModel.findById(req.params.id);
+    delete req.body.userId;
+    if (like === LIKE) {
+      try {
+        await sauceModel.updateOne(
+          { _id: req.params.id },
+          { ...req.body, $inc: { likes: like }, $push: { usersLiked: userId } }
+        );
+        return res
+          .status(200)
+          .json({ message: "cet utilisateur aime la sauce" });
+      } catch (error) {
+        throw new Error(error);
       }
-    );
-    return res
-      .status(200)
-      .json({ message: "cet utilisateur n'aime pas la sauce" });
-  }
+    }
+    if (like === DISLIKE) {
+      try {
+        await sauceModel.updateOne(
+          { _id: req.params.id },
+          {
+            ...req.body,
+            $inc: { dislikes: 1 },
+            $push: { usersDisliked: userId },
+          }
+        );
+        return res
+          .status(200)
+          .json({ message: "cet utilisateur n'aime pas la sauce" });
+      } catch (error) {
+        throw new Error(error);
+      }
+    }
 
-  if (selectedSauce.usersDisliked.includes(userId)) {
-    await sauceModel.updateOne(
-      { _id: req.params.id },
-      {
-        ...req.body,
-        $inc: { dislikes: -1 },
-        $pull: { usersDisliked: userId },
+    if (selectedSauce.usersDisliked.includes(userId)) {
+      try {
+        await sauceModel.updateOne(
+          { _id: req.params.id },
+          {
+            ...req.body,
+            $inc: { dislikes: -1 },
+            $pull: { usersDisliked: userId },
+          }
+        );
+        return res.status(200).json({ message: "le dislike est annulé" });
+      } catch (error) {
+        throw new Error(error);
       }
-    );
-    return res.status(200).json({ message: "le dislike est annulé" });
-  } else if (selectedSauce.usersLiked.includes(userId)) {
-    await sauceModel.updateOne(
-      { _id: req.params.id },
-      {
-        ...req.body,
-        $inc: { likes: -1 },
-        $pull: { usersLiked: userId },
+    } else if (selectedSauce.usersLiked.includes(userId)) {
+      try {
+        await sauceModel.updateOne(
+          { _id: req.params.id },
+          {
+            ...req.body,
+            $inc: { likes: -1 },
+            $pull: { usersLiked: userId },
+          }
+        );
+        return res.status(200).json({ message: "le like est annulé" });
+      } catch (error) {
+        throw new Error(error);
       }
-    );
-    return res.status(200).json({ message: "le like est annulé" });
+    }
+  } catch (error) {
+    throw new Error(error);
   }
 };
 
@@ -128,16 +158,23 @@ const updateSauce = async (req, res) => {
 
 //DELETE /api/sauces/:id
 const deleteSauce = async (req, res) => {
-  const deletedSauce = await sauceModel.findById(req.params.id);
-  if (deletedSauce.userId != req.auth.userId) {
-    return res.status(401).json({ message: "Not authorized" });
+  try {
+    const deletedSauce = await sauceModel.findById(req.params.id);
+    if (deletedSauce.userId != req.auth.userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+    const filename = deletedSauce.imageUrl.split("/images/")[1];
+    fs.unlink(`images/${filename}`, async () => {
+      try {
+        await sauceModel.deleteOne({ _id: req.params.id });
+        res.status(200).json({ message: "La sauce a été supprimée" });
+      } catch (error) {
+        throw new Error(error);
+      }
+    });
+  } catch (error) {
+    throw new Error(error);
   }
-
-  const filename = deletedSauce.imageUrl.split("/images/")[1];
-  fs.unlink(`images/${filename}`, async () => {
-    await sauceModel.deleteOne({ _id: req.params.id });
-    res.status(200).json({ message: "La sauce a été supprimée" });
-  });
 };
 
 module.exports = {
