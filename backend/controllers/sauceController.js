@@ -31,25 +31,22 @@ const postSauce = async (req, res) => {
   const objectSauce = JSON.parse(req.body.sauce);
   delete objectSauce._id;
   delete objectSauce._userId;
-  const newSauce = new sauceModel({
-    ...objectSauce,
-    userId: req.auth.userId,
-    imageUrl: `${req.protocol}://${req.get("host")}/images/${
-      req.file.filename
-    }`,
-    likes: 0,
-    dislikes: 0,
-    usersLiked: [],
-    usersDisliked: [],
-  });
-  newSauce
-    .save()
-    .then(() => {
-      res.status(201).json({ message: "Votre sauce a bien été ajouté" });
-    })
-    .catch((error) => {
-      throw new Error(error);
+  try {
+    await sauceModel.create({
+      ...objectSauce,
+      userId: req.auth.userId,
+      imageUrl: `${req.protocol}://${req.get("host")}/images/${
+        req.file.filename
+      }`,
+      likes: 0,
+      dislikes: 0,
+      usersLiked: [],
+      usersDisliked: [],
     });
+    res.status(201).json({ message: "Votre sauce a bien été ajouté" });
+  } catch (error) {
+    throw new Error(error);
+  }
 };
 
 //POST /api/sauces/:id/like
