@@ -9,6 +9,7 @@ connectDB();
 const app = express();
 
 app.use(express.json());
+app.use(helmet());
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -19,11 +20,10 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, PATCH, OPTIONS"
   );
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
   next();
 });
 app.use("/images", express.static(path.join(__dirname, "images")));
-app.use(helmet());
-
 app.use("/api/auth", require("./routes/userRoutes"));
 app.use("/api/sauces", require("./routes/sauceRoutes"));
 

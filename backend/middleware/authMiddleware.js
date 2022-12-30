@@ -1,4 +1,7 @@
 const jwt = require("jsonwebtoken");
+const passwordValidator = require("password-validator");
+const validPassword = new passwordValidator();
+const passwordSchema = validPassword.is().min(4).has().not().spaces();
 
 const auth = async (req, res, next) => {
   try {
@@ -9,7 +12,7 @@ const auth = async (req, res, next) => {
       userId: userId,
     };
     if (req.body.userId && req.body.userId !== userId) {
-      throw "wrong userId";
+      throw new Error("Mauvais UserId");
     } else {
       next();
     }
@@ -18,6 +21,17 @@ const auth = async (req, res, next) => {
   }
 };
 
+const passwordValidation = (req, res, next) => {
+  if (!passwordSchema.validate(req.body.password)) {
+    return res.status(403).json({
+      message:
+        "Le mot de passe doit contenir au moins 4 lettres ou chiffres et être sans espace.",
+    });
+  }
+  next();
+};
+
 module.exports = {
   auth,
+  passwordValidation,
 };
